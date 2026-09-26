@@ -12,6 +12,24 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "K B Financial Services | Financial Solutions in Varanasi",
   description: "K B Financial Services provides customer-focused financial assistance and guidance in Varanasi, Uttar Pradesh. Explore financial solutions, loan assistance and enquiry services.",
+  keywords: [
+    "financial services",
+    "loans",
+    "Varanasi",
+    "financial assistance",
+    "K B Financial Services",
+    "financial guidance",
+    "business loans",
+    "personal loans"
+  ],
+  openGraph: {
+    title: "K B Financial Services | Financial Solutions in Varanasi",
+    description: "K B Financial Services provides customer-focused financial assistance and guidance in Varanasi, Uttar Pradesh.",
+    url: process.env.NEXT_PUBLIC_BASE_URL || "https://kbfinance.in.net",
+    siteName: "K B Financial Services",
+    locale: "en_IN",
+    type: "website",
+  },
   icons: {
     icon: "/logo.png",
   },
