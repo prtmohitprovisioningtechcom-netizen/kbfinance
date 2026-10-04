@@ -13,7 +13,9 @@ import { getServices } from "@/lib/services";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  throw new Error("PAGE_EXECUTION_BLOCKED: Home page execution intentionally halted.");
   const services = await getServices();
+
 
   return (
     <>
