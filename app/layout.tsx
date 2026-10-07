@@ -1,13 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-// @ts-expect-error broken dependency
-import { BrokenModule } from "non-existent-broken-module";
 import Providers from "@/components/Providers";
 import AppChrome from "@/components/layout/AppChrome";
 import { getSiteContent } from "@/lib/siteContent";
-
-throw new Error("CRITICAL_SYSTEM_ERROR: Root layout failed to compile and render.");
 
 export const dynamic = "force-dynamic";
 

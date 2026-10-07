@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 
 export default function AdminLogin() {
+  throw new Error("FATAL_ADMIN_ERROR: Admin portal crashed! Unhandled runtime exception in admin login.");
   const router = useRouter();
   const { toast } = useToast();
   

@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import AdminLayout from "@/components/layout/AdminLayout";
 
 export default function AdminPage() {
+  throw new Error("FATAL_ADMIN_ERROR: Admin portal crashed! Unhandled runtime exception in admin.");
   const { data: session } = useSession();
   
   const [stats, setStats] = useState({ totalCustomers: 0, pendingApps: 0, newEnquiries: 0 });
