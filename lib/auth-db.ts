@@ -86,16 +86,16 @@ export async function ensureDefaultAdmin() {
 export function dbErrorMessage(error: unknown) {
   const err = error as { code?: string; message?: string };
   if (err?.message === "DB timeout") {
-    return "Database timed out. Vercel cannot reach your MySQL host. Allow remote MySQL (%) and use a public DB_HOST, not localhost.";
+    return "Database timed out. Server cannot reach your MySQL host. Check DB_HOST.";
   }
   if (err?.code === "ECONNREFUSED" || err?.code === "ENOTFOUND" || err?.code === "ETIMEDOUT") {
-    return "Database connection failed. DB_HOST must be a public MySQL host (not localhost), and remote access must be allowed.";
+    return "Database connection failed. Please verify DB_HOST and port in your hosting environment.";
   }
   if (err?.code === "ER_ACCESS_DENIED_ERROR") {
-    return err.message || "Database login failed. Vercel is reaching MySQL, but this user is not allowed from Vercel IPs. Create a remote MySQL user with host % — local root@localhost will not work.";
+    return "Database login failed: Access denied for MySQL user. Please configure DB_USER, DB_PASSWORD, and DB_NAME in your Hostinger / production environment (.env or Node.js settings).";
   }
   if (err?.code === "ER_BAD_DB_ERROR") {
-    return "Database name not found. Check DB_NAME on Vercel.";
+    return "Database name not found. Check DB_NAME in your hosting environment.";
   }
   if (err?.code === "ER_NO_SUCH_TABLE") {
     return "Database table does not exist. Please visit /api/setup-db.";

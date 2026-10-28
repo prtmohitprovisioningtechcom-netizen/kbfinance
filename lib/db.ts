@@ -12,6 +12,10 @@ function env(name: string, fallback = "") {
 const host = env("DB_HOST", "localhost");
 const useSsl = env("DB_SSL") === "true";
 
+if (process.env.NODE_ENV === "production" && (!process.env.DB_USER || !process.env.DB_PASSWORD)) {
+  console.warn("⚠️ [DB Configuration] DB_USER or DB_PASSWORD is not set in production! Hostinger will reject connection as root with no password. Please configure .env on the server.");
+}
+
 const pool = mysql.createPool({
   host,
   port: Number(env("DB_PORT", "3306")) || 3306,
