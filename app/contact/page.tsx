@@ -38,7 +38,11 @@ export default function ContactPage() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) throw new Error("Submission failed");
+      const resData = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(resData?.error || "Submission failed. Please try again.");
+      }
 
       toast({
         title: "Inquiry Submitted!",
@@ -46,10 +50,10 @@ export default function ContactPage() {
         variant: "default",
       });
       reset();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "There was a problem submitting your inquiry. Please try again later.",
+        description: error?.message || "There was a problem submitting your inquiry. Please try again later.",
         variant: "destructive",
       });
     } finally {

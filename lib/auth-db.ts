@@ -97,5 +97,8 @@ export function dbErrorMessage(error: unknown) {
   if (err?.code === "ER_BAD_DB_ERROR") {
     return "Database name not found. Check DB_NAME on Vercel.";
   }
+  if (err?.code === "ER_NO_SUCH_TABLE") {
+    return "Database table does not exist. Please visit /api/setup-db.";
+  }
   return err?.message || "Internal server error";
 }

@@ -48,7 +48,11 @@ export default function EnquiryModal({
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) throw new Error("Submission failed");
+      const resData = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(resData?.error || "Problem submitting inquiry. Please try again.");
+      }
 
       toast({
         title: "Inquiry Submitted!",
@@ -56,10 +60,10 @@ export default function EnquiryModal({
       });
       reset();
       setOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Problem submitting inquiry. Please try again.",
+        description: error?.message || "Problem submitting inquiry. Please try again.",
         variant: "destructive",
       });
     } finally {

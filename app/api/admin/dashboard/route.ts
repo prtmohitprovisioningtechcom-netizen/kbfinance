@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import pool, { ensureContactTable } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { ensureAuthTables, dbErrorMessage } from '@/lib/auth-db';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
@@ -12,26 +15,47 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    await ensureAuthTables().catch(() => {});
+    await ensureContactTable().catch(() => {});
+
     // Fetch Total Customers
-    const [customersResult] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM customers');
-    const totalCustomers = customersResult[0].count;
+    let totalCustomers = 0;
+    try {
+      const [customersResult] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM customers');
+      totalCustomers = customersResult[0]?.count || 0;
+    } catch (e) {
+      console.warn('Dashboard customers count warning:', e);
+    }
 
     // Fetch Pending Applications
-    const [appsResult] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM loan_applications WHERE status IN ("NEW", "UNDER_REVIEW")');
-    const pendingApps = appsResult[0].count;
+    let pendingApps = 0;
+    let recentApps: any[] = [];
+    try {
+      const [appsResult] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM loan_applications WHERE status IN ("NEW", "UNDER_REVIEW")');
+      pendingApps = appsResult[0]?.count || 0;
+
+      const [recentAppsRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT l.id, u.name as user, l.service_type as action_type, "submitted a new loan application" as action, l.created_at, l.status FROM loan_applications l JOIN users u ON l.user_id = u.id ORDER BY l.created_at DESC LIMIT 3'
+      );
+      recentApps = recentAppsRows;
+    } catch (e) {
+      console.warn('Dashboard loan applications warning:', e);
+    }
 
     // Fetch New Enquiries
-    const [enquiriesResult] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM contact_inquiries WHERE status = "NEW"');
-    const newEnquiries = enquiriesResult[0].count;
+    let newEnquiries = 0;
+    let recentEnquiries: any[] = [];
+    try {
+      const [enquiriesResult] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM contact_inquiries WHERE status = "NEW"');
+      newEnquiries = enquiriesResult[0]?.count || 0;
 
-    // Fetch Recent Activity (Combining recent inquiries and loan applications)
-    const [recentEnquiries] = await pool.execute<RowDataPacket[]>(
-      'SELECT id, name as user, service_required as action_type, "submitted a new enquiry" as action, created_at, status FROM contact_inquiries ORDER BY created_at DESC LIMIT 3'
-    );
-    
-    const [recentApps] = await pool.execute<RowDataPacket[]>(
-      'SELECT l.id, u.name as user, l.service_type as action_type, "submitted a new loan application" as action, l.created_at, l.status FROM loan_applications l JOIN users u ON l.user_id = u.id ORDER BY l.created_at DESC LIMIT 3'
-    );
+      const [recentEnquiriesRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT id, name as user, service_required as action_type, "submitted a new enquiry" as action, created_at, status FROM contact_inquiries ORDER BY created_at DESC LIMIT 3'
+      );
+      recentEnquiries = recentEnquiriesRows;
+    } catch (e) {
+      console.warn('Dashboard enquiries warning:', e);
+    }
 
     // Combine and sort by date descending
     const activity = [...recentEnquiries, ...recentApps]
@@ -39,10 +63,10 @@ export async function GET(request: Request) {
       .slice(0, 5)
       .map(item => ({
         id: item.id + '-' + item.action_type,
-        user: item.user,
-        action: item.action + ' for ' + item.action_type,
-        time: item.created_at, // Will be formatted on client
-        status: item.status.toLowerCase()
+        user: item.user || 'Unknown',
+        action: item.action + ' for ' + (item.action_type || 'General Inquiry'),
+        time: item.created_at,
+        status: (item.status || 'NEW').toLowerCase()
       }));
 
     return NextResponse.json({
@@ -55,6 +79,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error fetching admin dashboard data:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: dbErrorMessage(error) }, { status: 500 });
   }
 }

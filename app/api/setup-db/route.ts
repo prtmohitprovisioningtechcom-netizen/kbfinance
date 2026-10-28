@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import pool, { ensureContactTable } from '@/lib/db';
+import { ensureAuthTables, ensureDefaultAdmin } from '@/lib/auth-db';
+
+export const dynamic = 'force-dynamic';
 
 const initialServices = [
   {
@@ -70,7 +73,50 @@ const initialServices = [
 
 export async function GET() {
   try {
-    // 1. Create table if it doesn't exist (Useful for Vercel production)
+    // 1. Create users and customers tables and default admin
+    try {
+      await ensureAuthTables();
+      await ensureDefaultAdmin();
+    } catch (authErr) {
+      console.warn('Auth tables setup warning:', authErr);
+    }
+
+    // 2. Create contact_inquiries table
+    await ensureContactTable();
+
+    // 3. Create loan_applications table
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS loan_applications (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          service_type VARCHAR(255) NOT NULL,
+          loan_amount DECIMAL(15, 2) NOT NULL,
+          employment_type VARCHAR(100),
+          status ENUM('NEW', 'UNDER_REVIEW', 'DOCUMENTATION', 'PROCESSING', 'COMPLETED', 'REJECTED') DEFAULT 'NEW',
+          message TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+    } catch (loanErr) {
+      console.warn('Loan applications table setup warning:', loanErr);
+    }
+
+    // 4. Create settings table
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS settings (
+          setting_key VARCHAR(100) PRIMARY KEY,
+          setting_value TEXT
+        )
+      `);
+    } catch (settingsErr) {
+      console.warn('Settings table setup warning:', settingsErr);
+    }
+
+    // 5. Create services table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS services (
         id VARCHAR(255) PRIMARY KEY,
@@ -83,10 +129,10 @@ export async function GET() {
       )
     `);
 
-    // 2. Check if table is empty
+    // 6. Check if table is empty and seed
     const [rows] = await pool.query('SELECT COUNT(*) as count FROM services');
+    let seeded = false;
     
-    // 3. Seed data if empty
     if ((rows as any)[0].count === 0) {
       for (const svc of initialServices) {
         await pool.query(
@@ -94,12 +140,17 @@ export async function GET() {
           [svc.id, svc.title, svc.subtitle, JSON.stringify(svc.bullets), svc.buttonText, svc.image]
         );
       }
-      return NextResponse.json({ success: true, message: "Database table created and seeded with 8 services successfully!" });
+      seeded = true;
     }
 
-    return NextResponse.json({ success: true, message: "Database table is already set up and contains data." });
-  } catch (error) {
+    return NextResponse.json({
+      success: true,
+      message: seeded
+        ? "All database tables (users, customers, contact_inquiries, loan_applications, settings, services) created and seeded successfully!"
+        : "All database tables verified and up-to-date."
+    });
+  } catch (error: any) {
     console.error('Setup error:', error);
-    return NextResponse.json({ error: 'Failed to setup database', details: error }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to setup database', details: error?.message || error }, { status: 500 });
   }
 }

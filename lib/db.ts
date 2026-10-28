@@ -49,6 +49,22 @@ function withTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T> {
   });
 }
 
+export async function ensureContactTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS contact_inquiries (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      phone VARCHAR(20),
+      email VARCHAR(255),
+      city VARCHAR(100),
+      service_required VARCHAR(255),
+      message TEXT,
+      status ENUM('NEW', 'IN_PROGRESS', 'RESOLVED') DEFAULT 'NEW',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
 export { withTimeout };
 
 export default pool;
