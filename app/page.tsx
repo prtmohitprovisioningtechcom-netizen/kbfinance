@@ -13,7 +13,9 @@ import { getServices } from "@/lib/services";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  throw new Error("FATAL_RUNTIME_ERROR: Website execution crashed! Unhandled exception on home page.");
   const services = await getServices();
+
 
   return (
     <>
