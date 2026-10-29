@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Phone, Mail, Clock } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useSiteContent } from "@/components/content/SiteContentProvider";
 
@@ -17,25 +16,38 @@ type FormData = {
   phone: string;
   email: string;
   city: string;
+  service?: string;
   message: string;
-  agree: boolean;
 };
 
 export default function ContactPage() {
   const { toast } = useToast();
   const { contact } = useSiteContent();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>();
+  const [submitted, setSubmitted] = useState(false);
+  const [agree, setAgree] = useState(true);
+  const [agreeError, setAgreeError] = useState(false);
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
+    if (!agree) {
+      setAgreeError(true);
+      return;
+    }
+    setAgreeError(false);
     setIsSubmitting(true);
+
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          agree: true,
+        }),
       });
 
       const resData = await response.json().catch(() => null);
@@ -44,6 +56,7 @@ export default function ContactPage() {
         throw new Error(resData?.error || "Submission failed. Please try again.");
       }
 
+      setSubmitted(true);
       toast({
         title: "Inquiry Submitted!",
         description: "We have received your message and will get back to you shortly.",
@@ -139,53 +152,96 @@ export default function ContactPage() {
               
               <h2 className="text-2xl font-bold text-[#0A2540] mb-6">{contact.formTitle}</h2>
               
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input id="name" {...register("name", { required: true })} placeholder="John Doe" />
-                    {errors.name && <span className="text-xs text-red-500">Name is required</span>}
+              {submitted ? (
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl p-8 text-center space-y-4 my-4 animate-in fade-in duration-300">
+                  <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8" />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Mobile Number *</Label>
-                    <Input id="phone" {...register("phone", { required: true })} placeholder="831 876 3728" />
-                    {errors.phone && <span className="text-xs text-red-500">Phone is required</span>}
+                  <h3 className="text-2xl font-bold text-emerald-900">Inquiry Submitted Successfully!</h3>
+                  <p className="text-emerald-700 max-w-md mx-auto">
+                    Thank you for contacting K B Financial Services. We have received your inquiry and our advisor will reach out to you shortly.
+                  </p>
+                  <Button 
+                    type="button"
+                    onClick={() => setSubmitted(false)}
+                    className="bg-[#1952B3] hover:bg-[#0A2540] text-white mt-2"
+                  >
+                    Submit Another Inquiry
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name *</Label>
+                      <Input id="name" {...register("name", { required: "Name is required" })} placeholder="John Doe" />
+                      {errors.name && <span className="text-xs text-red-500">{errors.name.message}</span>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Mobile Number *</Label>
+                      <Input id="phone" {...register("phone", { required: "Phone is required" })} placeholder="831 876 3728" />
+                      {errors.phone && <span className="text-xs text-red-500">{errors.phone.message}</span>}
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" {...register("email")} placeholder="john@example.com" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input id="email" type="email" {...register("email")} placeholder="john@example.com" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City *</Label>
+                      <Input id="city" {...register("city", { required: "City is required" })} placeholder="Varanasi" />
+                      {errors.city && <span className="text-xs text-red-500">{errors.city.message}</span>}
+                    </div>
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="city">City *</Label>
-                    <Input id="city" {...register("city", { required: true })} placeholder="Varanasi" />
-                    {errors.city && <span className="text-xs text-red-500">City is required</span>}
+                    <Label htmlFor="service">Service Required (Optional)</Label>
+                    <Input id="service" {...register("service")} placeholder="e.g. Personal Loan, Home Loan, Business Loan" />
                   </div>
-                </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="message">Message</Label>
+                    <Textarea id="message" {...register("message")} placeholder="How can we help you?" className="min-h-[120px]" />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message</Label>
-                  <Textarea id="message" {...register("message")} placeholder="How can we help you?" className="min-h-[120px]" />
-                </div>
+                  <div className="space-y-1">
+                    <div className="flex items-start gap-2">
+                      <Checkbox 
+                        id="agree" 
+                        checked={agree}
+                        onCheckedChange={(checked) => {
+                          setAgree(Boolean(checked));
+                          if (checked) setAgreeError(false);
+                        }}
+                      />
+                      <Label htmlFor="agree" className="text-sm font-normal text-gray-600 leading-tight cursor-pointer">
+                        I agree to the website's Privacy Policy and consent to being contacted regarding my enquiry.
+                      </Label>
+                    </div>
+                    {agreeError && (
+                      <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                        <AlertCircle className="w-3.5 h-3.5" /> Please accept the terms to submit your inquiry.
+                      </p>
+                    )}
+                  </div>
 
-                <div className="flex items-start gap-2">
-                  <Checkbox 
-                    id="agree" 
-                    onCheckedChange={(checked) => setValue("agree", checked as boolean)} 
-                    required 
-                  />
-                  <Label htmlFor="agree" className="text-sm font-normal text-gray-600 leading-tight">
-                    I agree to the website's Privacy Policy and consent to being contacted regarding my enquiry.
-                  </Label>
-                </div>
-
-                <Button type="submit" disabled={isSubmitting} className="w-full bg-[#1952B3] hover:bg-[#0A2540] text-white h-12 text-lg rounded-xl">
-                  {isSubmitting ? "Submitting..." : "Submit Inquiry"}
-                </Button>
-              </form>
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="w-full bg-[#1952B3] hover:bg-[#0A2540] text-white h-12 text-lg rounded-xl"
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" /> Submitting...
+                      </span>
+                    ) : (
+                      "Submit Inquiry"
+                    )}
+                  </Button>
+                </form>
+              )}
             </div>
 
           </div>
