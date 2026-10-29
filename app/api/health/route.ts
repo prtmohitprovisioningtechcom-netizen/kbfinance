@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     await pingDatabase();
-    return NextResponse.json({ ok: true, db: true });
+    return NextResponse.json({ ok: true, db: true, version: "v3-live" });
   } catch (error) {
     return NextResponse.json(
-      { ok: false, db: false, error: dbErrorMessage(error) },
+      { ok: false, db: false, error: dbErrorMessage(error), version: "v3-live" },
       { status: 200 }
     );
   }

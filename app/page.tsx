@@ -13,16 +13,19 @@ import { getServices } from "@/lib/services";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  throw new Error("FATAL_RUNTIME_ERROR: Website execution crashed! Unhandled exception on home page.");
-  const services = await getServices();
-
+  let services: any[] = [];
+  try {
+    services = await getServices();
+  } catch (error) {
+    console.error("Home getServices error:", error);
+  }
 
   return (
     <>
       <Hero />
       <Stats />
       <AboutSnippet />
-      <Services services={services} />
+      <Services services={services || []} />
       <Workflow />
       <MeetFounder />
       <WhyChooseUs />
